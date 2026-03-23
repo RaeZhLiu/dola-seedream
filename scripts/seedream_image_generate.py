@@ -48,12 +48,56 @@ API_BASE = os.getenv(
     "https://ark.ap-southeast.bytepluses.com/api/v3"
 ).rstrip("/")
 
-# Model names for each version
+# Model names for each version (official model IDs from BytePlus documentation)
 MODELS = {
     "4.0": "seedream-4-0-250828",
     "4.5": "seedream-4-5-251128",
     "5.0-lite": "seedream-5-0-260128",
     "5.0": "seedream-5-0-260128",
+}
+
+# Resolution presets (from official documentation)
+RESOLUTION_PRESETS = {
+    "1K": "1024x1024",
+    "2K": "2048x2048",
+    "3K": "3072x3072",
+    "4K": "4096x4096",
+}
+
+# Pixel range limits per version (width * height)
+# From official documentation:
+# - 5.0-lite: [3,686,400, 10,404,496]
+# - 4.5: [3,686,400, 16,777,216]
+# - 4.0: [921,600, 16,777,216]
+PIXEL_RANGES = {
+    "4.0": (921600, 16777216),
+    "4.5": (3686400, 16777216),
+    "5.0-lite": (3686400, 10404496),
+    "5.0": (3686400, 10404496),
+}
+
+# Supported output formats per version
+OUTPUT_FORMATS = {
+    "4.0": ["jpeg"],
+    "4.5": ["jpeg"],
+    "5.0-lite": ["png", "jpeg"],
+    "5.0": ["png", "jpeg"],
+}
+
+# Supported prompt modes per version
+PROMPT_MODES = {
+    "4.0": ["standard", "fast"],
+    "4.5": ["standard"],
+    "5.0-lite": ["standard"],
+    "5.0": ["standard"],
+}
+
+# Supported resolutions per version (presets)
+SUPPORTED_RESOLUTIONS = {
+    "4.0": ["1K", "2K", "4K"],
+    "4.5": ["2K", "4K"],
+    "5.0-lite": ["2K", "3K"],
+    "5.0": ["2K", "3K"],
 }
 
 # Supported fields per version (based on official documentation)
@@ -64,13 +108,90 @@ SUPPORTED_FIELDS = {
     "5.0": ["size", "response_format", "watermark", "image", "sequential_image_generation", "sequential_image_generation_options", "stream", "optimize_prompt_options", "output_format"],
 }
 
-# Version descriptions
+# Version descriptions (from official documentation)
 VERSION_DESCRIPTIONS = {
-    "4.0": "Seedream 4.0 - Stable for daily use, support 1K/2K/4K resolution and fast mode.",
-    "4.5": "Seedream 4.5 - Improved detail, support 2K/4K resolution.",
-    "5.0-lite": "Seedream 5.0-lite - Highest quality, support 2K/3K resolution and PNG output.",
-    "5.0": "Seedream 5.0 (alias for 5.0-lite) - Latest features.",
+    "4.0": "Seedream 4.0 - Stable for daily use, supports 1K/2K/4K resolution and fast prompt mode.",
+    "4.5": "Seedream 4.5 - Improved detail for complex scenes, supports 2K/4K resolution.",
+    "5.0-lite": "Seedream 5.0-lite - Highest quality with breakthrough creative expression, supports 2K/3K resolution and PNG/JPEG output.",
+    "5.0": "Seedream 5.0 (alias for 5.0-lite) - Latest and most powerful version.",
 }
+
+def _parse_size(size_str: str) -> Tuple[int, int]:
+    """
+    Parse size string into width and height.
+    Supports: "2048x2048", "2K", "3K", "4K", etc.
+    """
+    size_str = size_str.strip().upper()
+    
+    # Check if it's a preset
+    if size_str in RESOLUTION_PRESETS:
+        size_str = RESOLUTION_PRESETS[size_str]
+    
+    # Parse WxH format
+    if "x" in size_str:
+        try:
+            w, h = size_str.split("x", 1)
+            return int(w.strip()), int(h.strip())
+        except ValueError:
+            raise ValueError(f"Invalid size format: {size_str}. Expected format: '2048x2048' or '2K'")
+    
+    raise ValueError(f"Invalid size: {size_str}. Expected format: '2048x2048' or '2K'")
+
+def _validate_size(size_str: str, version: str) -> str:
+    """
+    Validate and normalize size for a given version.
+    Returns normalized size string (WxH).
+    """
+    width, height = _parse_size(size_str)
+    min_pixels, max_pixels = PIXEL_RANGES.get(version, (0, float('inf')))
+    total_pixels = width * height
+    
+    if total_pixels < min_pixels:
+        raise ValueError(
+            f"Size {width}x{height} ({total_pixels:,} pixels) too small for {version}. "
+            f"Minimum: {min_pixels:,} pixels."
+        )
+    if total_pixels > max_pixels:
+        raise ValueError(
+            f"Size {width}x{height} ({total_pixels:,} pixels) too large for {version}. "
+            f"Maximum: {max_pixels:,} pixels."
+        )
+    
+    return f"{width}x{height}"
+
+def _validate_output_format(output_format: str, version: str) -> str:
+    """Validate output format for a given version."""
+    supported = OUTPUT_FORMATS.get(version, ["jpeg"])
+    if output_format not in supported:
+        raise ValueError(
+            f"Output format '{output_format}' not supported for {version}. "
+            f"Supported formats: {', '.join(supported)}"
+        )
+    return output_format
+
+def _validate_prompt_mode(prompt_mode: str, version: str) -> str:
+    """Validate prompt mode for a given version."""
+    supported = PROMPT_MODES.get(version, ["standard"])
+    if prompt_mode not in supported:
+        raise ValueError(
+            f"Prompt mode '{prompt_mode}' not supported for {version}. "
+            f"Supported modes: {', '.join(supported)}"
+        )
+    return prompt_mode
+
+def _validate_max_images(max_images: int) -> int:
+    """Validate max_images parameter (1-15)."""
+    if not (1 <= max_images <= 15):
+        raise ValueError(f"max_images must be between 1 and 15, got {max_images}")
+    return max_images
+
+def _validate_image_count(image_count: int, max_images: int) -> None:
+    """Validate that reference images + generated images <= 15."""
+    if image_count + max_images > 15:
+        raise ValueError(
+            f"Reference images ({image_count}) + generated images ({max_images}) = {image_count + max_images}, "
+            f"which exceeds the limit of 15."
+        )
 
 def _get_headers() -> dict:
     if not API_KEY:
@@ -81,27 +202,78 @@ def _get_headers() -> dict:
     }
 
 def _build_request_body(item: dict, model_name: str, version: str) -> dict:
+    """
+    Build and validate the request body according to official BytePlus documentation.
+    """
+    # Validate required prompt
+    prompt = item.get("prompt", "")
+    if not prompt:
+        raise ValueError("Prompt is required")
+    
     body = {
         "model": model_name,
-        "prompt": item.get("prompt", ""),
+        "prompt": prompt,
     }
 
-    supported_fields = SUPPORTED_FIELDS.get(version, [])
-    for field in supported_fields:
-        if field in item and item[field] is not None:
-            body[field] = item[field]
+    # Validate and add size
+    if "size" in item and item["size"]:
+        normalized_size = _validate_size(item["size"], version)
+        body["size"] = normalized_size
 
-    # Batch generation options
+    # Add response format
+    if "response_format" in item and item["response_format"]:
+        body["response_format"] = item["response_format"]
+
+    # Add watermark
+    if "watermark" in item and item["watermark"] is not None:
+        body["watermark"] = bool(item["watermark"])
+
+    # Add stream
+    if "stream" in item and item["stream"]:
+        body["stream"] = True
+
+    # Add reference image(s) - support up to 14 images
+    if "image" in item and item["image"]:
+        images = item["image"]
+        if isinstance(images, list):
+            if len(images) > 14:
+                raise ValueError(f"Maximum 14 reference images allowed, got {len(images)}")
+            body["image"] = images
+        else:
+            body["image"] = images
+
+    # Validate and add output format (5.0-lite only)
+    if "output_format" in item and item["output_format"]:
+        if version in ["5.0-lite", "5.0"]:
+            validated_format = _validate_output_format(item["output_format"], version)
+            body["output_format"] = validated_format
+
+    # Batch generation
     if item.get("sequential_image_generation") == "auto":
-        options = dict(item.get("sequential_image_generation_options") or {})
-        if "max_images" in item:
-            options["max_images"] = item["max_images"]
-        if options:
-            body["sequential_image_generation_options"] = options
+        body["sequential_image_generation"] = "auto"
+        
+        max_images = item.get("max_images", 15)
+        validated_max = _validate_max_images(max_images)
+        
+        # Check reference images count
+        image_count = 0
+        if "image" in item and item["image"]:
+            images = item["image"]
+            image_count = len(images) if isinstance(images, list) else 1
+        
+        _validate_image_count(image_count, validated_max)
+        
+        body["sequential_image_generation_options"] = {
+            "max_images": validated_max
+        }
+    else:
+        # Default: disabled
+        body["sequential_image_generation"] = "disabled"
 
     # Prompt optimization options
     if "prompt_mode" in item and item["prompt_mode"]:
-        body["optimize_prompt_options"] = {"mode": item["prompt_mode"]}
+        validated_mode = _validate_prompt_mode(item["prompt_mode"], version)
+        body["optimize_prompt_options"] = {"mode": validated_mode}
 
     return body
 
@@ -127,14 +299,23 @@ async def handle_single_task(
     model_name: str,
     version: str,
     semaphore: asyncio.Semaphore
-) -> Tuple[List[dict], List[str], List[dict]]:
+) -> Tuple[List[dict], List[str], List[dict], Optional[dict]]:
+    """
+    Handle a single image generation task.
+    Returns: (success_list, error_list, error_detail_list, usage_info)
+    """
     async with semaphore:
         success_list = []
         error_list = []
         error_detail_list = []
+        usage_info = None
 
         try:
             response = await _call_image_api(client, item, model_name, version)
+
+            # Extract usage information if available
+            if "usage" in response:
+                usage_info = response["usage"]
 
             if "error" not in response:
                 data_list = response.get("data", [])
@@ -167,7 +348,7 @@ async def handle_single_task(
             error_list.append(f"task_{idx}")
             error_detail_list.append({"task_idx": idx, "error": str(e)})
 
-        return success_list, error_list, error_detail_list
+        return success_list, error_list, error_detail_list, usage_info
 
 async def seedream_generate(
     tasks: List[dict],
@@ -175,11 +356,29 @@ async def seedream_generate(
     timeout: int = 1200,
     concurrency: int = 5
 ) -> Dict:
+    """
+    Main function to generate images using Seedream models.
+    
+    Args:
+        tasks: List of task dictionaries, each containing prompt and parameters
+        version: Model version ("4.0", "4.5", "5.0-lite", "5.0")
+        timeout: Timeout in seconds for each request
+        concurrency: Maximum concurrent requests
+    
+    Returns:
+        Dictionary with results, including success_list, error_list, usage info, etc.
+    """
     if version not in MODELS:
-        return {"status": "error", "error_list": [f"Unsupported version: {version}"]}
+        return {
+            "status": "error", 
+            "error_list": [f"Unsupported version: {version}. Supported versions: {', '.join(MODELS.keys())}"]
+        }
 
     if not API_KEY:
-        return {"status": "error", "error_list": ["Missing ARK_DOLA_API_KEY environment variable."]}
+        return {
+            "status": "error", 
+            "error_list": ["Missing ARK_DOLA_API_KEY environment variable. Please set it with your BytePlus API key."]
+        }
 
     model_name = MODELS[version]
     semaphore = asyncio.Semaphore(concurrency)
@@ -191,18 +390,33 @@ async def seedream_generate(
     success_list = []
     error_list = []
     error_detail_list = []
+    all_usage_info = []
 
     for res in results:
         if isinstance(res, Exception):
             error_list.append("exception")
             error_detail_list.append({"error": str(res)})
         else:
-            s, e, ed = res
+            s, e, ed, usage = res
             success_list.extend(s)
             error_list.extend(e)
             error_detail_list.extend(ed)
+            if usage:
+                all_usage_info.append(usage)
 
-    return {
+    # Aggregate usage information
+    total_usage = None
+    if all_usage_info:
+        total_generated = sum(u.get("generated_images", 0) for u in all_usage_info)
+        total_output_tokens = sum(u.get("output_tokens", 0) for u in all_usage_info)
+        total_tokens = sum(u.get("total_tokens", 0) for u in all_usage_info)
+        total_usage = {
+            "generated_images": total_generated,
+            "output_tokens": total_output_tokens,
+            "total_tokens": total_tokens,
+        }
+
+    result = {
         "status": "success" if success_list else "error",
         "success_list": success_list,
         "error_list": error_list,
@@ -210,6 +424,11 @@ async def seedream_generate(
         "model": model_name,
         "version": version,
     }
+    
+    if total_usage:
+        result["usage"] = total_usage
+
+    return result
 
 def main():
     parser = argparse.ArgumentParser(
@@ -237,11 +456,15 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    # Set default size if not provided
+    # Set default size based on version (from official documentation)
     size = args.size
     if not size:
-        if args.version in ["4.0", "4.5", "5.0-lite", "5.0"]:
-            size = "2K"
+        if args.version in ["5.0-lite", "5.0"]:
+            size = "2K"  # 5.0-lite supports 2K and 3K
+        elif args.version == "4.5":
+            size = "2K"  # 4.5 supports 2K and 4K
+        elif args.version == "4.0":
+            size = "2K"  # 4.0 supports 1K, 2K, and 4K
         else:
             size = "2048x2048"
 
