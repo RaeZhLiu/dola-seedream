@@ -27,25 +27,9 @@ Use this skill when:
 
 | Version  | Model Name          | Release Date  | Recommendation | Best For                                           |
 | -------- | ------------------- | ------------- | -------------- | -------------------------------------------------- |
-| 4.0      | seedream-4-0-250828 | August 2025   | ⭐⭐⭐         | Daily use, supports 1K/2K/4K and Fast prompt mode |
-| 4.5      | seedream-4-5-251128 | November 2025 | ⭐⭐⭐⭐       | Detail-oriented for complex scenes, supports 2K/4K |
-| 5.0-lite | seedream-5-0-260128 | January 2026  | ⭐⭐⭐⭐⭐     | Highest quality with breakthrough creative expression, supports 2K/3K and PNG/JPEG output |
-| 5.0      | seedream-5-0-260128 | January 2026  | ⭐⭐⭐⭐⭐     | Alias for 5.0-lite, latest and most powerful version |
-
-### Model Capabilities Comparison
-
-| Feature | 5.0-lite | 4.5 | 4.0 |
-|---------|----------|-----|-----|
-| **Text-to-Image** | ✅ | ✅ | ✅ |
-| **Single Image-to-Image** | ✅ | ✅ | ✅ |
-| **Multi-Image Fusion (up to 14)** | ✅ | ✅ | ✅ |
-| **Batch Generation (up to 15)** | ✅ | ✅ | ✅ |
-| **Streaming Output** | ✅ | ✅ | ✅ |
-| **Resolutions** | 2K, 3K | 2K, 4K | 1K, 2K, 4K |
-| **Output Formats** | PNG, JPEG | JPEG | JPEG |
-| **Prompt Modes** | standard | standard | standard, fast |
-| **Pixel Range (width×height)** | 3.68M - 10.4M | 3.68M - 16.7M | 0.92M - 16.7M |
-| **Max Images/Minute** | 500 | 500 | 500 |
+| 4.0      | seedream-4-0-250828 | August 2025   | ⭐⭐⭐         | Daily use, supports 1K/2K/4K and Fast mode         |
+| 4.5      | seedream-4-5-251128 | November 2025 | ⭐⭐⭐⭐       | Detail-oriented, supports 2K/4K                    |
+| 5.0-lite | seedream-5-0-260128 | 2026          | ⭐⭐⭐⭐⭐     | Highest quality, supports 2K/3K and PNG output     |
 
 ## Features
 
@@ -86,6 +70,7 @@ python scripts/seedream_image_generate.py -p "A cute kitten playing in a garden"
 | `--images`          | -        | Multiple reference image URLs (space separated) | -            |
 | `--group`           | `-g`     | Enable batch image generation                   | `false`      |
 | `--max-images`      | -        | Maximum images for batch generation             | `15`         |
+| `--seed`            | -        | Random seed for reproducibility                | `-1`         |
 | `--output-format`   | -        | Output format: `png` or `jpeg` (5.0-lite only)  | `jpeg`       |
 | `--response-format` | -        | Response format: `url` or `b64_json`            | `url`        |
 | `--prompt-mode`     | -        | Prompt optimization mode: `standard` or `fast`  | `standard`   |
@@ -136,7 +121,6 @@ if __name__ == "__main__":
 - You want the highest quality
 - You need breakthrough creative expression
 - You have extreme detail requirements
-- **You need tools parameter (like web search)** ⭐
 - **You need custom output format (png/jpeg)** ⭐
 - Important projects and work
 
@@ -160,38 +144,23 @@ if __name__ == "__main__":
 
 | Parameter                           | Seedream 4.0 | Seedream 4.5 | Seedream 5.0 | Description                        |
 | ----------------------------------- | ------------ | ------------ | ------------ | ---------------------------------- |
-| **model** (required)                | ✅           | ✅           | ✅           | Model ID (seedream-x-x-xxxxxx)   |
-| **prompt** (required)               | ✅           | ✅           | ✅           | Text prompt (recommended ≤ 600 words) |
-| **image**                           | ✅           | ✅           | ✅           | Reference image(s) (URL or Base64, up to 14) |
-| **size**                            | ✅           | ✅           | ✅           | Image dimensions (preset: 1K/2K/3K/4K or WxH) |
-| **sequential_image_generation**     | ✅           | ✅           | ✅           | Batch generation: "auto" or "disabled" |
-| **sequential_image_generation_options** | ✅       | ✅           | ✅           | Batch config: {max_images: 1-15} |
-| **response_format**                 | ✅           | ✅           | ✅           | Response format: "url" (24h valid) or "b64_json" |
-| **watermark**                       | ✅           | ✅           | ✅           | Watermark: true (default) or false |
-| **stream**                          | ✅           | ✅           | ✅           | Streaming output: true or false (default) |
-| **optimize_prompt_options**         | ✅           | ✅           | ✅           | Prompt optimization: {mode: "standard"} |
-| **output_format**                   | ❌           | ❌           | **✅**       | Output format: "png" or "jpeg" (5.0-lite only) |
-
-### Important Notes
-
-- **Reference Images**: Up to 14 images supported. Reference images + generated images ≤ 15.
-- **Image Formats**: JPEG, PNG (5.0-lite also supports WEBP, BMP, TIFF, GIF)
-- **Image Size**: Max 10MB, ≤ 6000×6000 pixels, aspect ratio [1/16, 16]
-- **Prompt Length**: Recommended ≤ 600 English words to avoid detail loss
-- **URL Validity**: Generated URLs are valid for 24 hours
-- **Token Calculation**: output_tokens = sum(width × height) / 256 (rounded down)
-
+| model                               | ✅           | ✅           | ✅           | Model name                         |
+| prompt                              | ✅           | ✅           | ✅           | Prompt (required)                  |
+| image                               | ✅           | ✅           | ✅           | Reference image(s)                 |
+| size                                | ✅           | ✅           | ✅           | Image dimensions                   |
+| sequential_image_generation         | ✅           | ✅           | ✅           | Batch generation control           |
+| sequential_image_generation_options | ✅           | ✅           | ✅           | Batch generation config            |
+| response_format                     | ✅           | ✅           | ✅           | Response format (url/b64_json)     |
+| watermark                           | ✅           | ✅           | ✅           | Watermark (true/false)             |
+| stream                              | ✅           | ✅           | ✅           | Streaming output                   |
+| optimize_prompt_options             | ✅           | ✅           | ✅           | Prompt optimization config         |
+| **output_format**                   | ❌           | ❌           | **✅**       | Output format (png/jpeg, 5.0 only) |
 
 ## FAQ
 
 ### Q: What's the difference between the versions?
 
-A: 
-- **4.0**: Quick daily use, supports 1K/2K/4K resolution and fast prompt mode
-- **4.5**: Improved detail for complex scenes, supports 2K/4K resolution
-- **5.0-lite/5.0**: Highest quality with breakthrough creative expression, supports 2K/3K resolution and PNG/JPEG output
-
-**When in doubt, use 5.0!** ⭐
+A: 4.0 is for quick daily use, 4.5 offers better details for complex scenes, and 5.0 provides the highest quality and artistic creativity.
 
 ### Q: How long are generated URLs valid?
 
@@ -199,41 +168,11 @@ A: URLs are valid for 24 hours. Please download and save your images promptly.
 
 ### Q: What image formats are supported for references?
 
-A: 
-- 4.0/4.5: JPEG, PNG
-- 5.0-lite: JPEG, PNG, WEBP, BMP, TIFF, GIF
-- All versions support URL or Base64 encoding
+A: Common formats like JPG and PNG are supported, provided via URL or Base64.
 
 ### Q: Can I use multiple versions in one call?
 
 A: Currently, only one version per call. For comparisons, make separate calls for different versions.
-
-### Q: What's the maximum number of reference images?
-
-A: Up to 14 reference images. Note: reference images + generated images ≤ 15.
-
-### Q: What's the maximum image size for references?
-
-A: Max 10MB, ≤ 6000×6000 pixels, aspect ratio between 1/16 and 16.
-
-### Q: How are tokens calculated?
-
-A: output_tokens = sum(width × height) / 256 (rounded down). total_tokens = output_tokens.
-
-### Q: What's the maximum generation rate?
-
-A: All versions support up to 500 images per minute.
-
-### Q: Can I disable the watermark?
-
-A: Yes, set `watermark: false` to disable the "AI generated" watermark.
-
-### Q: What's the difference between "standard" and "fast" prompt modes?
-
-A: 
-- "standard": Higher quality, longer generation time (default for all versions)
-- "fast": Faster but lower quality (only available for 4.0)
-
 
 ## License
 

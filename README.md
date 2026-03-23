@@ -13,6 +13,7 @@ dola-seedream simplifies the process of creating AI-generated artwork. Whether y
 *   **Batch Generation**: Generate sequential images (up to 15) in a single request.
 *   **Format Control**: Support for PNG and JPEG output formats (Version 5.0-lite specific).
 *   **Image-to-Image**: Use reference images to guide generation.
+*   **Reproducibility**: Control generation with a fixed random seed.
 
 ## Model Comparison
 
@@ -73,10 +74,10 @@ python3 scripts/seedream_image_generate.py -p "A majestic mountain landscape" -v
 python3 scripts/seedream_image_generate.py -p "Character design sheet" --group --max-images 5
 ```
 
-**Generating PNG images (5.0-lite only) without watermark:**
+**Generating PNG images (5.0-lite only) and without watermark:**
 
 ```bash
-python3 scripts/seedream_image_generate.py -p "Logo design" -v 5.0-lite --output-format png --no-watermark
+python3 scripts/seedream_image_generate.py -p "Logo of a new startup named 'Luminos'" -v 5.0-lite --output-format png --no-watermark
 ```
 
 ### Parameters Reference
